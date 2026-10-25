@@ -37,7 +37,7 @@
     { name: 'discord', official: ['discord.com', 'discord.gg', 'discordapp.com'] },
     { name: 'twitter', official: ['twitter.com', 'x.com', 't.co'] },
     { name: 'linkedin', official: ['linkedin.com', 'lnkd.in'] },
-    { name: 'github', official: ['github.com', 'github.io', 'githubusercontent.com'] },
+    { name: 'github', official: ['github.com', 'github.io', 'githubusercontent.com', 'github.blog', 'githubassets.com'] },
     { name: 'dropbox', official: ['dropbox.com'] },
     { name: 'docusign', official: ['docusign.com', 'docusign.net'] },
     { name: 'coinbase', official: ['coinbase.com'] },

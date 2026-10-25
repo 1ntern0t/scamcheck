@@ -89,3 +89,8 @@ test('"brand.com-word.tld" fake-TLD label trick', () => {
     assert.equal(ids(sc.analyzeUrl(u)).includes('url.fake_tld_label'), false, u);
   }
 });
+
+test('github.blog is an official GitHub domain (post-hoc, found by held-out set 3)', () => {
+  assert.equal(ids(sc.analyzeUrl('https://github.blog/2026-10-01-ci/')).includes('url.brand_unofficial_tld'), false);
+  assert.ok(ids(sc.analyzeUrl('https://github.top/login')).includes('url.brand_unofficial_tld'));
+});
