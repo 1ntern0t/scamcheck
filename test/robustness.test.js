@@ -74,3 +74,25 @@ test('bare unicode domains are still extracted at token boundaries', () => {
   assert.equal(u.length, 1);
   assert.equal(u[0].value, 'p\u0430ypal.com');
 });
+
+test('thousands of links or addresses stay fast and report truncation', () => {
+  const cases = {
+    'bare domains': rep('a.co '),
+    'http links': rep('http://a.co '),
+    'defanged links': rep('hxxp://a[.]com '),
+    'markdown links': rep('[http://a.com](http://b.com) '),
+    'html anchors': rep('<a href="http://b.com">http://a.com</a> '),
+    'distinct mixed-case EVM addresses': Array.from({ length: 2300 }, (_, i) => '0xAb' + i.toString(16).padStart(38, 'c')).join(' ')
+  };
+  for (const [name, s] of Object.entries(cases)) {
+    let r;
+    const ms = timed(() => { r = sc.analyze(s); });
+    assert.ok(ms < 1000, name + ' took ' + ms.toFixed(0) + 'ms');
+    assert.ok(r.truncated, name + ' should report truncation');
+  }
+  assert.ok(timed(() => sc.checkSender({ displayName: rep('a'), memberId: 'x' }, { verifiedIds: ['y'] })) < 200);
+});
+
+test('ordinary messages are not marked truncated', () => {
+  assert.equal(sc.analyze('see https://github.com/x and 0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed').truncated, undefined);
+});

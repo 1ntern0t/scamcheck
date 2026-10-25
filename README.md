@@ -70,6 +70,10 @@ scamcheck.analyze('Hey, DM me your webhook URL so I can fix payouts', {
 });
 ```
 
+Work caps: `analyze` scores at most the first 300 links and 200 crypto-address candidates and
+truncates input to 100,000 characters (override with `{ maxLength }`). When a cap is hit, the result has a
+`truncated` field so callers know the score covers only part of the input.
+
 Levels: `low` < 25 ≤ `medium` < 50 ≤ `high` < 75 ≤ `critical`. Requests for secrets (seed phrase,
 private key, password, API key, bearer token, webhook URL) always force the score to at least 90 and set `critical: true`.
 

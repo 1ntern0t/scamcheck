@@ -94,6 +94,13 @@
     'cfd', 'bond', 'lat', 'win', 'vip', 'id', 'at'
   ]);
 
+  // Work caps so a message stuffed with thousands of links/addresses stays
+  // fast. Everything beyond the cap is still extracted but not scored.
+  const MAX_URLS = 300;
+  const MAX_ADDRESSES = 200;
+  const MAX_LINK_PAIRS = 300;
+  const MAX_NAME_LENGTH = 512;
+
   const SECOND_LEVEL = new Set(['co', 'com', 'net', 'org', 'gov', 'edu', 'ac', 'or', 'ne', 'go']);
 
   // Brand-adjacent words used to build phishing hostnames: paypal-login, appleid-verify.
@@ -420,13 +427,18 @@
   function extractUrls(input) {
     const text = toText(input);
     const found = [];
-    const spans = [];
-    const overlaps = (s, e) => spans.some(([a, b]) => s < b && e > a);
+    // Per-character coverage map: overlap checks cost O(match length)
+    // instead of O(number of matches so far).
+    const covered = new Uint8Array(text.length + 1);
+    const overlaps = (s, e) => {
+      for (let i = s; i < e; i++) if (covered[i]) return true;
+      return false;
+    };
     const push = (value, start, explicit) => {
       value = value.replace(/[.,;:!?'")\]}>]+$/, '');
       const end = start + value.length;
       if (overlaps(start, end)) return;
-      spans.push([start, end]);
+      covered.fill(1, start, end);
       found.push({ value, start, end, explicitScheme: explicit });
     };
     let m;
@@ -474,7 +486,7 @@
       pairs.push({ display: after.slice(0, end.index).replace(/<[^>]{0,2000}>/g, ''), href: href[1] });
       reOpen.lastIndex = close + 1;
     }
-    for (const p of pairs) {
+    for (const p of pairs.slice(0, MAX_LINK_PAIRS)) {
       const shown = extractUrls(p.display)[0];
       if (!shown) continue;
       let shownHost, realHost;
@@ -581,24 +593,30 @@
     return null;
   }
 
-  function extractAddresses(input) {
+  // `max` limits how many candidates are validated (each costs a hash).
+  function extractAddresses(input, max) {
     const text = toText(input);
+    const limit = typeof max === 'number' && max >= 0 ? max : Infinity;
     const out = [];
     const seen = new Set();
-    const add = (r) => {
-      if (r && !seen.has(r.input)) { seen.add(r.input); out.push(r); }
+    const add = (cand) => {
+      if (seen.has(cand)) return;
+      seen.add(cand);
+      const r = analyzeAddress(cand);
+      if (r) out.push(r);
     };
     let m;
     const reEth = /(?<![0-9a-zA-Z])0x[0-9a-fA-F]{36,44}(?![0-9a-zA-Z])/g;
-    while ((m = reEth.exec(text))) add(analyzeAddress(m[0]));
+    while (seen.size < limit && (m = reEth.exec(text))) add(m[0]);
     const reBech = /(?<![0-9a-zA-Z])(?:bc1|tb1)[02-9ac-hj-np-z]{6,87}(?![0-9a-zA-Z])/gi;
-    while ((m = reBech.exec(text))) add(analyzeAddress(m[0]));
+    while (seen.size < limit && (m = reBech.exec(text))) add(m[0]);
     const reB58 = /(?<![0-9a-zA-Z])[1-9A-HJ-NP-Za-km-z]{25,44}(?![0-9a-zA-Z])/g;
-    while ((m = reB58.exec(text))) {
+    while (seen.size < limit && (m = reB58.exec(text))) {
       if (/^(bc1|tb1)/i.test(m[0])) continue;
       if (!/[0-9]/.test(m[0]) && !/[A-Z]/.test(m[0].slice(1))) continue; // plain words
-      add(analyzeAddress(m[0]));
+      add(m[0]);
     }
+    if (seen.size >= limit) out.truncated = true;
     return out;
   }
 
@@ -740,7 +758,7 @@
     const reasons = [];
     if (!sender || typeof sender !== 'object') return reasons;
     options = options || {};
-    const name = toText(sender.displayName || sender.name || '');
+    const name = toText(sender.displayName || sender.name || '').slice(0, MAX_NAME_LENGTH);
     const id = toText(sender.memberId || sender.id || '');
     const verifiedIds = toList(options.verifiedIds).map(toText);
     const pn = options.protectedNames === undefined || options.protectedNames === null
@@ -818,7 +836,7 @@
 
     // URLs
     const urlHits = extractUrls(text);
-    const urls = urlHits.map((h) => {
+    const urls = urlHits.slice(0, MAX_URLS).map((h) => {
       const r = analyzeUrl(h.value, { explicitScheme: h.explicitScheme });
       for (const reason of r.reasons) reasons.push(reason);
       return r;
@@ -826,11 +844,18 @@
     for (const r of findLinkMismatches(text)) reasons.push(r);
 
     // Addresses (scan text with URLs removed to avoid path fragments)
-    let scrubbed = text;
-    for (const h of urlHits.slice().sort((a, b) => b.start - a.start)) {
-      scrubbed = scrubbed.slice(0, h.start) + ' '.repeat(h.end - h.start) + scrubbed.slice(h.end);
+    // Built in one pass; rebuilding the string per URL was O(n * urls).
+    const parts = [];
+    let pos = 0;
+    for (const h of urlHits.slice().sort((a, b) => a.start - b.start)) {
+      if (h.start < pos) continue;
+      parts.push(text.slice(pos, h.start), ' '.repeat(h.end - h.start));
+      pos = h.end;
     }
-    const addresses = extractAddresses(scrubbed);
+    parts.push(text.slice(pos));
+    const scrubbed = parts.join('');
+    const addressCandidates = extractAddresses(scrubbed, MAX_ADDRESSES);
+    const addresses = addressCandidates.slice();
     for (const a of addresses) {
       if (!a.valid) {
         reasons.push(makeReason('crypto.invalid_address', 'crypto', 15,
@@ -892,7 +917,7 @@
     score = Math.max(0, Math.min(100, score));
     unique.sort((a, b) => (b.critical ? 1 : 0) - (a.critical ? 1 : 0) || b.weight - a.weight);
 
-    return {
+    const result = {
       score,
       level: levelFor(score),
       critical,
@@ -903,6 +928,12 @@
       engine: 'scamcheck/' + VERSION,
       disclaimer: DISCLAIMER
     };
+    // Present only when a work cap was hit; the score then covers only the
+    // first MAX_URLS links / MAX_ADDRESSES address candidates.
+    if (urlHits.length > MAX_URLS || addressCandidates.truncated) {
+      result.truncated = { urlsFound: urlHits.length, urlsAnalyzed: urls.length, addressLimitHit: !!addressCandidates.truncated };
+    }
+    return result;
   }
 
   return {
@@ -918,6 +949,7 @@
     registrableDomain,
     levelFor,
     checkSender,
+    LIMITS: { MAX_URLS, MAX_ADDRESSES, MAX_LINK_PAIRS, MAX_NAME_LENGTH },
     DEFAULT_PROTECTED_NAMES,
     BRANDS,
     SHORTENERS,
