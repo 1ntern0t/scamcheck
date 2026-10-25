@@ -101,3 +101,18 @@ test('Cyrillic shha (U+04BB) is treated as a look-alike of "h"', () => {
   const r = sc.analyzeUrl('https://xn--gitub-0kf.com/login'); // git\u04bbub.com
   assert.ok(r.reasons.some((x) => x.id === 'url.homograph_brand'));
 });
+
+test('script-scheme links behind brand-looking text are reported as such', () => {
+  const md = sc.analyze('[https://paypal.com](javascript:alert(6))');
+  const a = sc.analyze('<a href="javascript:alert(5)">https://paypal.com</a>');
+  for (const r of [md, a]) {
+    const mm = r.reasons.find((x) => x.id === 'url.display_mismatch');
+    assert.ok(mm, 'display mismatch expected');
+    assert.match(mm.message, /runs a javascript: link/);
+  }
+  const paren = sc.analyze('[https://paypal.com](https://evil.example/a_(b))');
+  assert.ok(paren.reasons.some((x) => x.id === 'url.display_mismatch'));
+  assert.ok(timedOk(() => sc.analyze(rep('[a]((('))));
+});
+
+function timedOk(fn) { return timed(fn) < 1000; }

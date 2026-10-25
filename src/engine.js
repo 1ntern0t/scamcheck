@@ -467,9 +467,10 @@
     const reasons = [];
     const pairs = [];
     let m;
-    // Bounded, and the href may not contain brackets/parens, so text like
+    // Bounded, and the href may not contain brackets, so text like
     // "[a]([a]([a](..." cannot make each "[" rescan the rest of the input.
-    const reMd = /\[([^\[\]]{1,200})\]\(\s*([^()\[\]\s]{1,2048})\s*\)/g;
+    // One level of balanced parens is allowed: javascript:alert(1), Foo_(bar).
+    const reMd = /\[([^\[\]]{1,200})\]\(\s*((?:[^()\[\]\s]|\([^()\[\]\s]{0,256}\)){1,2048})\s*\)/g;
     while ((m = reMd.exec(text))) pairs.push({ display: m[1], href: m[2] });
     // HTML anchors are found with indexOf and bounded windows instead of one
     // backtracking regex (the old pattern took >20s on 100KB of '<a href="').
@@ -489,15 +490,18 @@
     for (const p of pairs.slice(0, MAX_LINK_PAIRS)) {
       const shown = extractUrls(p.display)[0];
       if (!shown) continue;
+      // new URL('javascript:...') parses (with an empty host), so check first.
+      const scheme = /^\s*(javascript|data|vbscript):/i.exec(p.href);
+      if (scheme) {
+        reasons.push(makeReason('url.display_mismatch', 'url', 45,
+          'Link text shows "' + shown.value + '" but actually runs a ' + scheme[1].toLowerCase() + ': link.', p.href));
+        continue;
+      }
       let shownHost, realHost;
       try {
         shownHost = new URL(normalizeUrlInput(shown.value).raw).hostname.toLowerCase();
         realHost = new URL(normalizeUrlInput(p.href).raw).hostname.toLowerCase();
       } catch (e) {
-        if (/^(javascript|data|vbscript):/i.test(p.href)) {
-          reasons.push(makeReason('url.display_mismatch', 'url', 45,
-            'Link text shows "' + shown.value + '" but actually runs a ' + p.href.split(':')[0] + ': link.', p.href));
-        }
         continue;
       }
       if (registrableDomain(shownHost) !== registrableDomain(realHost)) {
