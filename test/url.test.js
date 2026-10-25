@@ -78,3 +78,14 @@ test('legit IDN without brand imitation is only a mild signal', () => {
   const r = sc.analyzeUrl('https://xn--mnchen-3ya.de/');
   assert.ok(r.score <= 15, JSON.stringify(r.reasons));
 });
+
+test('"brand.com-word.tld" fake-TLD label trick', () => {
+  for (const u of ['https://ezpass-toll.com-pay.info', 'https://usps.com-track.top/x', 'http://bank.net-secure.example/login']) {
+    const r = sc.analyzeUrl(u);
+    assert.ok(ids(r).includes('url.fake_tld_label'), u + ' ' + JSON.stringify(ids(r)));
+    assert.ok(r.score >= 35, u);
+  }
+  for (const u of ['https://www.example.com/com-pay', 'https://com-pay.example', 'https://my-company.com']) {
+    assert.equal(ids(sc.analyzeUrl(u)).includes('url.fake_tld_label'), false, u);
+  }
+});

@@ -385,6 +385,18 @@
       }
     }
 
+    // Fake-TLD label: ezpass-toll.com-pay.info reads as "ezpass-toll.com" but
+    // the real site is com-pay.info. Also usps.com-track.top, x.net-secure.io.
+    for (let i = 1; i < labels.length - 1; i++) {
+      const mm = /^(com|net|org|gov|edu|co)-[a-z0-9]/.exec(labels[i]);
+      if (mm) {
+        const shown = labels.slice(0, i).join('.') + '.' + mm[1];
+        reasons.push(makeReason('url.fake_tld_label', 'url', 35,
+          'Address starts like "' + shown + '" but the real site is ' + reg + ' (a "' + mm[1] + '-" label fakes the ending).', host));
+        break;
+      }
+    }
+
     // Excessive subdomains.
     const subCount = labels.length - reg.split('.').length - (labels[0] === 'www' ? 1 : 0);
     if (subCount >= 4) {
