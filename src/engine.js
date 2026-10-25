@@ -655,7 +655,7 @@
     {
       id: 'msg.password_request', category: 'credential-theft', weight: 35, negatable: true, critical: true,
       message: 'Asks for your password or login credentials.',
-      re: /\b(send|share|give|confirm|provide|enter|dm|tell)\s+(me\s+|us\s+)?(your\s+)(password|passcode|login\s*details|credentials|pin)\b|\bwhat('?s|\s+is)\s+your\s+(password|passcode|login\s+password|pin)\b/i
+      re: /\b(send|share|give|confirm|provide|enter|dm|tell|text|reply\s+with)\s+(me\s+|us\s+)?(your\s+)(password|passcode|login\s*details|credentials|pin)\b|\bwhat('?s|\s+is)\s+your\s+(password|passcode|login\s+password|pin)\b/i
     },
     {
       id: 'msg.secret_request', category: 'credential-theft', weight: 50, negatable: true, critical: true,
@@ -675,12 +675,12 @@
     {
       id: 'msg.giveaway', category: 'crypto-giveaway', weight: 20,
       message: 'Mentions a giveaway, airdrop or free crypto reward.',
-      re: /\b(airdrop|give-?away|free\s+(crypto|btc|bitcoin|eth|sol|nft|tokens?)|claim\s+(your\s+)?(reward|tokens?|airdrop|nft|bonus|allocation))\b/i
+      re: /\b(airdrop|give-?away|free\s+(crypto|btc|bitcoin|eth|sol|nft|tokens?)|claim\s+(your\s+)?(reward|tokens?|airdrop|nft|bonus|allocation)|(pending|unclaimed)\s+(reward|airdrop|tokens?|bonus|payout))\b/i
     },
     {
       id: 'msg.guaranteed_returns', category: 'investment-fraud', weight: 30, negatable: true,
       message: 'Promises guaranteed or unrealistic investment returns.',
-      re: /\b(guaranteed\s+(profit|returns?|income)|risk[-\s]?free\s+(profit|returns?|investment)|\d{2,4}\s*%\s*(daily|weekly|per\s+day|a\s+day|per\s+week|roi)|(daily|weekly)\s+(roi|returns?)\s+of\s+\d+)/i
+      re: /\b(guaranteed\s+(profit|returns?|income)|risk[-\s]?free\s+(profit|returns?|investment)|\d{1,4}(\.\d+)?\s*%\s*(daily|weekly|per\s+day|a\s+day|every\s+day|each\s+day|per\s+week|roi)|(daily|weekly)\s+(roi|returns?)\s+of\s+\d+|\d{2,4}x\s+guaranteed|guaranteed\s+\d{2,4}x)/i
     },
     {
       id: 'msg.urgency', category: 'pressure', weight: 15,
@@ -690,7 +690,7 @@
     {
       id: 'msg.account_threat', category: 'pressure', weight: 15,
       message: 'Threatens account suspension/closure or claims "unusual activity".',
-      re: /\b(account|wallet|card|access)\s+(has\s+been\s+|will\s+be\s+|is\s+)?(suspended|locked|closed|disabled|restricted|frozen|terminated|compromised)\b|\bunusual\s+(sign-?in\s+)?activity\b|\bsuspicious\s+(login|activity)\s+(was\s+)?detected\b/i
+      re: /\b(account|wallet|card|access|ssn|profile|page)\s+(has\s+been\s+|will\s+be\s+|is\s+|is\s+being\s+)?(permanently\s+|temporarily\s+)?(suspended|locked|closed|disabled|restricted|frozen|terminated|compromised|deactivated|on\s+hold)\b|\bunusual\s+(sign-?in\s+)?activity\b|\bsuspicious\s+(login|activity)\s+(was\s+)?detected\b/i
     },
     {
       id: 'msg.verify_account', category: 'phishing', weight: 15,
@@ -721,7 +721,7 @@
     {
       id: 'msg.advance_fee', category: 'advance-fee', weight: 30,
       message: 'Advance-fee pattern: large sum or inheritance, unlocked by paying a fee first.',
-      re: /\b(inheritance|next\s+of\s+kin|beneficiary|barrister|diplomat(ic)?\s+(bag|courier)|unclaimed\s+(funds|fund|estate)|(release|transfer)\s+(of\s+)?(the|your)\s+funds|(processing|clearance|transfer|customs|release|activation|withdrawal|unlock|gas)\s+fee|\d+(\.\d+)?\s*(million|m)\s*(usd|dollars|euros|gbp))\b/i
+      re: /\b(inheritance|next\s+of\s+kin|beneficiary|barrister|diplomat(ic)?\s+(bag|courier)|unclaimed\s+(funds|fund|estate)|(release|transfer)\s+(of\s+)?(the|your)\s+funds|(processing|clearance|transfer|customs|release|activation|withdrawal|unlock|gas)\s+fee|(small\s+)?(upfront|up-front|advance)\s+(fee|payment)|\d+(\.\d+)?\s*(million|m)\s*(usd|dollars|euros|gbp))\b/i
     },
     {
       id: 'msg.untraceable_payment', category: 'payment-method', weight: 30,
@@ -738,7 +738,98 @@
     {
       id: 'msg.remote_access', category: 'impersonation', weight: 25, negatable: true,
       message: 'Asks you to install remote-access software (AnyDesk, TeamViewer...).',
-      re: /\b(install|download|open|run)\b[^.!?\n]{0,40}\b(anydesk|teamviewer|ultraviewer|rustdesk|supremo|quick\s*assist|screenconnect)\b/i
+      re: /\b(install|download|open|run)\b[^.!?\n]{0,40}\b(anydesk|teamviewer|ultraviewer|rustdesk|supremo|quick\s*assist|screenconnect|remote\s+(support|access|desktop|control)\s+(tool|app|software|program))\b/i
+    },
+    // ---- second-pass rules (all gaps between keywords are bounded) ----
+    {
+      id: 'msg.family_emergency', category: 'family-emergency', weight: 20,
+      message: '"New number" / broken phone / in-trouble story, the opening of family-emergency scams. Call the person on their old number.',
+      re: /\b(this\s+is\s+my\s+new\s+number|it'?s\s+my\s+new\s+number|my\s+new\s+number\s+is|new\s+(phone\s+)?number\s+for\s+now|(broke|lost|dropped|smashed|cracked)\s+my\s+phone|my\s+phone\s+(is\s+)?(broken|dead|lost|stolen)|i'?m\s+in\s+(trouble|jail|the\s+hospital|hospital)|bail\s+money)\b/i
+    },
+    {
+      id: 'msg.money_request', category: 'payment-request', weight: 15,
+      message: 'Asks you to send, wire or lend money or pay a bill for them.',
+      re: /\b(send|wire|transfer|lend|loan)\s+(me|us)\s+(some\s+)?(money|cash|funds|[$£€]\s?\d|\d+\s*(dollars|bucks|usd|euros?|pounds))|\b(can|could|would)\s+you\s+(please\s+)?(pay|cover|settle)\s+(a|an|this|my|the)\s+(bill|invoice|fee|payment)|\b(wire|send|transfer)\s+(the\s+)?money\s+to\b/i
+    },
+    {
+      id: 'msg.fee_notice', category: 'smishing', weight: 20,
+      message: 'Unpaid toll/parking/fine or a small delivery/customs fee notice, a very common SMS phishing lure.',
+      re: /\b(unpaid|outstanding|overdue)\s+(toll|parking|fine|ticket|balance|bill|fee|invoice)s?\b|\b(toll|parking)\s+(balance|fee|fine|violation|notice|charge|bill|ticket|due)s?\b|\b(balance|bill|fee|toll|fine)\s+is\s+(unpaid|overdue|outstanding)\b|\b(redelivery|re-delivery|delivery|customs|shipping|handling|release)\s+(fee|charge|duty|payment)s?\b|\bcustoms\s+duty\b|\bavoid\s+(a\s+)?(late\s+)?(penalt(y|ies)|fines?|fees?|charges?)\b/i
+    },
+    {
+      id: 'msg.delivery_problem', category: 'smishing', weight: 15,
+      message: 'Claims a delivery failed or is on hold. Check the carrier site yourself, not the link.',
+      re: /\b(we\s+)?(tried|attempted)\s+to\s+deliver\b|\b(delivery|package|parcel|shipment)\s+(attempt\s+)?(failed|unsuccessful)\b|\b(package|parcel|shipment)\b[^.!?\n]{0,60}\b(on\s+hold|is\s+held|being\s+held|could\s*n[o']?t\s+be\s+delivered|cannot\s+be\s+delivered|undeliverable|incomplete\s+address)\b/i
+    },
+    {
+      id: 'msg.job_scam', category: 'job-scam', weight: 30,
+      message: 'Job offer with reshipping, paid "tasks", unrealistic daily pay or a deposit to unlock earnings.',
+      re: /\b(reship(ping)?|re-ship(ping)?|forward(ing)?\s+(the\s+)?packages|package\s+forwarding)\b|\b(work\s+from\s+home|remote\s+job|part[-\s]?time\s+(job|position|work)|online\s+job|easy\s+job)\b[^\n]{0,120}?(\$\s?\d{2,4}\s*(\/|per|a)\s*(day|hour|hr)\b|\b\d{2,4}\s*(usd|dollars)\s*(\/|per|a)\s*day\b|\bdaily\s+pay\b|\bweekly\s+pay\b)|\b(earn|make)\s+\$?\d[\d,]*(\s*-\s*\$?\d[\d,]*)?\s*(\/\s*day|per\s+day|a\s+day|daily|every\s+day)\b|\b(app|product|order|video|hotel)\s+(rating|review|boost(ing)?|optimi[sz]ation)\s+tasks?\b|\btop\s+up\s+(your\s+)?(account|balance)\b[^.!?\n]{0,60}\b(withdraw|unlock|tasks?|earnings|commission)\b/i
+    },
+    {
+      id: 'msg.identity_docs', category: 'credential-theft', weight: 25, negatable: true,
+      message: 'Asks for your SSN, passport or ID scan, which enables identity theft.',
+      re: /\b(send|provide|upload|share|give|text|email)\b[^.!?\n]{0,40}\b(ssn|social\s+security\s+number|copy\s+of\s+(your\s+)?(id|passport|driver'?s?\s+licen[cs]e)|passport\s+(scan|photo|copy)|photo\s+of\s+your\s+(id|passport))\b/i
+    },
+    {
+      id: 'msg.recovery_scam', category: 'recovery-scam', weight: 35, negatable: true,
+      message: 'Offers to recover lost or stolen crypto/funds. Recovery services that contact you are almost always a second scam.',
+      re: /\b(recover|retrieve|get\s+back|trace)\b[^.!?\n]{0,40}\b(lost|stolen|scammed)\s+(crypto|funds|money|bitcoin|btc|coins?|assets|investments?)\b|\b(funds?|crypto|asset|bitcoin)\s+recovery\s+(team|agents?|experts?|services?|specialists?|company|firm)\b|\brecovery\s+(experts?|agents?|specialists?|hackers?)\b|\b(lost|stolen)\s+(crypto|funds|money)\b[^.!?\n]{0,80}\b(recover|retrieve|get\s+(it\s+)?back)\b/i
+    },
+    {
+      id: 'msg.bank_impersonation', category: 'impersonation', weight: 35, negatable: true,
+      message: 'Claims to be your bank\'s fraud/security team or sends a courier for your card or PIN. Banks never collect cards or ask for PINs.',
+      re: /\b(fraud|security)\s+(department|team|unit)\s+(at|of|from)\s+(your|the)\s+bank\b|\b(this\s+is|we\s+are|calling\s+from)\s+(your|the)\s+bank('?s)?(\s+(fraud|security)\s+(department|team))?\b|\bcourier\b[^.!?\n]{0,60}\b(collect|pick\s+up|pickup)\b[^.!?\n]{0,30}\b(card|cash|gold|money)\b|\b(write\s+(down\s+)?|have)\s+your\s+pin\b/i
+    },
+    {
+      id: 'msg.code_forward', category: 'credential-theft', weight: 30, negatable: true,
+      message: 'Asks you to read out or forward a code that was texted to you. That code lets them into your account.',
+      re: /\b(sent|texted)\s+(you\s+)?(a|the|my)\s+(\d-digit\s+)?code\b[^.!?\n]{0,80}\b(forward|send|share|give|read|tell)\b|\b(read|tell|give|send|forward)\s+(me|us)\s+(the|that|this)\s+(\d-digit\s+)?code\b/i
+    },
+    {
+      id: 'msg.callback_number', category: 'impersonation', weight: 30,
+      message: '"If this wasn\'t you, call this number": a callback scam. Use the number on the company\'s own site.',
+      re: /\b(if\s+(this\s+)?(was\s*n[o']?t|was\s+not)\s+you|if\s+you\s+did\s*n[o']?t\s+(request|make|authori[sz]e)\s+this|if\s+not\s+you)\b[^\n]{0,80}?\b(call|phone|ring|dial|contact)\b[^\n]{0,30}?\+?\d[\d\s().-]{7,20}\d/i
+    },
+    {
+      id: 'msg.card_details', category: 'credential-theft', weight: 30, negatable: true,
+      message: 'Asks you to (re-)enter your card number or CVV.',
+      re: /\b(re-?enter|enter|confirm|update|provide|verify|submit|send)\s+(your\s+)?(full\s+)?(card|credit\s+card|debit\s+card)\s+(number|details|info(rmation)?|cvv)\b|\bcvv\b/i
+    },
+    {
+      id: 'msg.refund_offchannel', category: 'impersonation', weight: 25,
+      message: 'Offers a refund or compensation over WhatsApp/Telegram/text instead of the official site.',
+      re: /\b(whatsapp|telegram|signal|text|call)\s+(me|us)\b[^.!?\n]{0,80}\b(refund|compensation|reimbursement|payout)\b|\b(refund|compensation)\b[^.!?\n]{0,80}\b(whatsapp|telegram)\b/i
+    },
+    {
+      id: 'msg.storage_full', category: 'smishing', weight: 15,
+      message: 'Claims your mailbox/cloud storage is full, a common phishing lure.',
+      re: /\b(mailbox|inbox|icloud|cloud\s+storage|email\s+storage|e-?mail\s+quota|storage\s+quota|mail\s+storage)\b[^.!?\n]{0,40}\b(full|exceeded|limit\s+reached|over\s+(the\s+)?limit|\d{2}%\s+full)\b|\b(exceeded|reached)\s+(its|your|the)\s+storage\s+limit\b/i
+    },
+    {
+      id: 'msg.deletion_threat', category: 'pressure', weight: 15,
+      message: 'Threatens that your messages, photos or files will be deleted.',
+      re: /\b(messages?|e-?mails?|photos?|files?|data|videos?)\b[^.!?\n]{0,30}\b(will\s+be|are\s+being|get)\s+(permanently\s+)?(deleted|removed|lost|erased)\b|\b(stop|no\s+longer)\s+receiv(e|ing)\s+(new\s+)?(e-?mails?|messages)\b/i
+    },
+    {
+      id: 'msg.investment_pitch', category: 'investment-fraud', weight: 25,
+      message: 'Unsolicited trading/investment pitch boasting of big profits ("pig-butchering" style).',
+      re: /\b(trading|investment|crypto|forex)\s+(platform|app|bot|group|club|mentor|signals?)\b[^\n]{0,120}?\b(made|earned|profit(ed|s)?|returns?)\b[^\n]{0,20}?\$?\d|\b(made|earned)\s+\$?\d+[kK]?\b[^\n]{0,80}?\b(trading|platform|bot|invest(ing|ment)?)\b|\bpresale\b[^.!?\n]{0,60}\b(before\s+(it\s+)?(lists?|listing|launch)|\d{2,4}x)\b/i
+    },
+    {
+      id: 'msg.romance_funds', category: 'advance-fee', weight: 30,
+      message: 'Stranger with a far-away job (soldier, oil rig, UN doctor) asking for help moving money or packages.',
+      re: /\b(soldier|peace-?keeping|deployed|oil\s+rig|offshore\s+(engineer|platform)|un\s+doctor|military\s+doctor)\b[^\n]{0,120}?\b(help|move|transfer|ship|send|receive)\b[^\n]{0,60}?\b(savings|funds|money|gold|package|consignment|box)\b/i
+    },
+    {
+      id: 'msg.safe_wallet', category: 'crypto-theft', weight: 35, negatable: true,
+      message: 'Asks you to move funds to a "safe"/"secure"/new address. No real service asks this.',
+      re: /\b(migrate|move|transfer|send|withdraw)\s+(all\s+)?(your|the)\s+(funds|assets|coins|crypto|balance|tokens)\b[^.!?\n]{0,40}\b(safe|secure|secured|new|protected|backup)\s+(address|wallet|account|vault)\b/i
+    },
+    {
+      id: 'msg.curiosity_lure', category: 'phishing', weight: 15, requiresLink: true,
+      message: 'Curiosity lure ("see who viewed your photos") next to a link.',
+      re: /\b(who\s+viewed\s+your|tagged\s+(photos?|you|pics?|videos?)|see\s+your\s+tagged)\b/i
     }
   ];
 
@@ -929,6 +1020,12 @@
       const otherSignal = reasons.some((r) => r.category !== 'crypto' && r.weight >= 10);
       reasons.push(makeReason('crypto.funds_request', 'crypto', otherSignal ? 25 : 10,
         'Asks you to send funds to a crypto address. Crypto transfers are generally irreversible.', sendMatch[0].trim()));
+    }
+
+    // Toll/delivery/storage notice that also carries a link.
+    if (urlHits.length && reasons.some((r) => r.category === 'smishing')) {
+      reasons.push(makeReason('combo.notice_with_link', 'combination', 10,
+        'A payment/delivery/storage notice that comes with a link. Go to the company site yourself instead.'));
     }
 
     // Deduplicate by id+evidence and score.
