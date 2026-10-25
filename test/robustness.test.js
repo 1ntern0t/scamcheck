@@ -34,3 +34,43 @@ test('malformed options do not throw', () => {
   assert.equal(r.reasons.some((x) => x.id === 'swarm.unknown_address'), false);
   assert.doesNotThrow(() => sc.checkSender({ displayName: 'admin' }, undefined));
 });
+
+// ReDoS regressions. Each input is 100KB; before the fix these took 3s to >20s.
+const N = 100000;
+const rep = (s) => s.repeat(Math.ceil(N / s.length)).slice(0, N);
+function timed(fn) {
+  const t = process.hrtime.bigint();
+  fn();
+  return Number(process.hrtime.bigint() - t) / 1e6;
+}
+
+test('no catastrophic backtracking on adversarial 100KB inputs', () => {
+  const cases = {
+    'html anchor openers': rep('<a href="'),
+    'markdown link openers': rep('[a]('),
+    'cyrillic dotted labels': rep('\u0430a.'),
+    'mixed-script domain chain': rep('p\u0430ypal.'),
+    'cyrillic brand-lure chain': rep('p\u0430ypal-login.')
+  };
+  for (const [name, s] of Object.entries(cases)) {
+    const ms = timed(() => sc.analyze(s));
+    assert.ok(ms < 1000, name + ' took ' + ms.toFixed(0) + 'ms');
+  }
+});
+
+test('anchor and markdown mismatch detection still works after the rewrite', () => {
+  const a = sc.analyze('<a class="x" href="http://evil.example/login">https://www.paypal.com</a>');
+  assert.ok(a.reasons.some((x) => x.id === 'url.display_mismatch'));
+  const b = sc.analyze('[https://www.paypal.com](http://evil.example/login)');
+  assert.ok(b.reasons.some((x) => x.id === 'url.display_mismatch'));
+  const c = sc.analyze('<A HREF=\'javascript:alert(1)\'><b>https://bank.com</b></A>');
+  assert.ok(c.reasons.some((x) => x.id === 'url.display_mismatch'));
+  const ok = sc.analyze('<a href="https://github.com/x">github.com/x</a> and [docs](https://github.com/y)');
+  assert.equal(ok.reasons.some((x) => x.id === 'url.display_mismatch'), false);
+});
+
+test('bare unicode domains are still extracted at token boundaries', () => {
+  const u = sc.extractUrls('visit p\u0430ypal.com today');
+  assert.equal(u.length, 1);
+  assert.equal(u[0].value, 'p\u0430ypal.com');
+});

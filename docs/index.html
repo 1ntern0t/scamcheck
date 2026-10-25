@@ -826,7 +826,10 @@
     while ((m = reScript.exec(text))) push(m[0], m.index, true);
     const reWww = /\bwww\.[^\s<>"'`\[\]]+/gi;
     while ((m = reWww.exec(text))) push(m[0], m.index, false);
-    const reBare = /(?<![@\w.\-/])((?:[a-z0-9\u00a1-\uffff](?:[a-z0-9\u00a1-\uffff-]{0,61}[a-z0-9\u00a1-\uffff])?\.)+([a-z]{2,24}|xn--[a-z0-9-]+))(?::\d{2,5})?(?:\/[^\s<>"'`\[\]]*)?/giu;
+    // The lookbehind includes non-ASCII letters so a match can only start at a
+    // real token boundary (otherwise every Cyrillic letter is a new start and
+    // the scan goes quadratic); label count is capped at the DNS maximum.
+    const reBare = /(?<![@\w.\-/\u00a1-\uffff])((?:[a-z0-9\u00a1-\uffff](?:[a-z0-9\u00a1-\uffff-]{0,61}[a-z0-9\u00a1-\uffff])?\.){1,127}([a-z]{2,24}|xn--[a-z0-9-]+))(?::\d{2,5})?(?:\/[^\s<>"'`\[\]]*)?/giu;
     while ((m = reBare.exec(text))) {
       const tld = m[2].toLowerCase();
       if (!BARE_TLDS.has(tld) && !tld.startsWith('xn--')) continue;
@@ -842,10 +845,25 @@
     const reasons = [];
     const pairs = [];
     let m;
-    const reMd = /\[([^\]]{1,200})\]\(\s*([^)\s]+)\s*\)/g;
+    // Bounded, and the href may not contain brackets/parens, so text like
+    // "[a]([a]([a](..." cannot make each "[" rescan the rest of the input.
+    const reMd = /\[([^\[\]]{1,200})\]\(\s*([^()\[\]\s]{1,2048})\s*\)/g;
     while ((m = reMd.exec(text))) pairs.push({ display: m[1], href: m[2] });
-    const reA = /<a\b[^>]*?href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]{0,300}?)<\/a>/gi;
-    while ((m = reA.exec(text))) pairs.push({ display: m[2].replace(/<[^>]+>/g, ''), href: m[1] });
+    // HTML anchors are found with indexOf and bounded windows instead of one
+    // backtracking regex (the old pattern took >20s on 100KB of '<a href="').
+    const reOpen = /<a\b/gi;
+    while ((m = reOpen.exec(text))) {
+      const close = text.indexOf('>', m.index);
+      if (close < 0) break;
+      if (close - m.index > 2000) continue;
+      const href = /\bhref\s*=\s*["']([^"']+)["']/i.exec(text.slice(m.index + 2, close));
+      if (!href) continue;
+      const after = text.slice(close + 1, close + 1 + 306);
+      const end = /<\/a>/i.exec(after);
+      if (!end || end.index > 300) continue;
+      pairs.push({ display: after.slice(0, end.index).replace(/<[^>]{0,2000}>/g, ''), href: href[1] });
+      reOpen.lastIndex = close + 1;
+    }
     for (const p of pairs) {
       const shown = extractUrls(p.display)[0];
       if (!shown) continue;
