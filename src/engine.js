@@ -631,7 +631,7 @@
     {
       id: 'msg.seed_phrase', category: 'credential-theft', weight: 50, negatable: true, critical: true,
       message: 'Asks for a wallet seed/recovery phrase or private key. Legitimate services never ask for these.',
-      re: /\b(seed\s*phrase|recovery\s*phrase|secret\s*(recovery\s*)?phrase|mnemonic(\s*phrase)?|private\s*key|(12|24)[-\s]*words?(\s*phrase)?|wallet\s*phrase|backup\s*phrase)\b/i
+      re: /\b(seed\s*phrase|recovery\s*phrase|secret\s*(recovery\s*)?phrase|mnemonic(\s*phrase)?|private\s*key|(12|24)[-\s]*words?(\s*(seed|recovery|secret|backup|wallet))?\s*phrase|your\s+(12|24)[-\s]*words|wallet\s*phrase|backup\s*phrase)\b/i
     },
     {
       id: 'msg.wallet_validation', category: 'credential-theft', weight: 25, negatable: true,

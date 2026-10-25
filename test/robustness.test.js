@@ -116,3 +116,10 @@ test('script-scheme links behind brand-looking text are reported as such', () =>
 });
 
 function timedOk(fn) { return timed(fn) < 1000; }
+
+test('a bare "12 words" count is not treated as a seed-phrase request', () => {
+  assert.equal(sc.analyze('The 12 words in the poem assignment should rhyme, per the teacher.').critical, false);
+  for (const s of ['Enter your 24 word phrase at the link', 'Type your 12 words to restore access', 'share your 12-word recovery phrase']) {
+    assert.ok(sc.analyze(s).reasons.some((x) => x.id === 'msg.seed_phrase'), s);
+  }
+});
