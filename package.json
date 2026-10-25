@@ -1,0 +1,31 @@
+{
+  "name": "scamcheck",
+  "version": "0.1.0",
+  "description": "Offline-first heuristic scam & fraud checker for messages, links and crypto addresses. CLI, library and a static browser page. No dependencies.",
+  "main": "index.js",
+  "bin": {
+    "scamcheck": "bin/scamcheck.js"
+  },
+  "files": [
+    "index.js",
+    "src/",
+    "bin/",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build:web": "node scripts/build-web.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": ["scam", "phishing", "fraud", "security", "crypto", "homograph", "typosquatting", "offline"],
+  "author": "1ntern0t",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1ntern0t/scamcheck.git"
+  }
+}

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>scamcheck: offline scam &amp; fraud checker</title>
+<style>
+  :root { color-scheme: light dark; --ok: #2e7d32; --med: #b26a00; --high: #c62828; --crit: #8e0000; }
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  textarea, input { width: 100%; box-sizing: border-box; font: inherit; padding: .5rem; }
+  textarea { min-height: 10rem; }
+  button { font: inherit; padding: .5rem 1.2rem; margin-top: .5rem; cursor: pointer; }
+  .score { font-size: 1.6rem; font-weight: 700; margin: 1rem 0 .5rem; }
+  .low { color: var(--ok); } .medium { color: var(--med); } .high { color: var(--high); } .critical { color: var(--crit); }
+  li { margin: .3rem 0; } code { word-break: break-all; }
+  details { margin: 1rem 0; } .note { font-size: .9rem; opacity: .8; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+</style>
+</head>
+<body>
+<h1>scamcheck</h1>
+<p>Paste a message, link, or crypto address. Everything runs <strong>in your browser</strong>: this page makes no network requests, and nothing you paste leaves your device.</p>
+<label for="input">Text to check</label>
+<textarea id="input" placeholder="e.g. URGENT: your account is suspended, verify at http://paypa1-secure.com"></textarea>
+<details>
+  <summary>Team-chat DM options (Slack-style spoofing checks)</summary>
+  <p class="note">Optional. Supplying a sender enables the swarm DM ruleset. Verified IDs come from you, not from this tool.</p>
+  <div class="grid">
+    <div><label for="sname">Sender display name</label><input id="sname"></div>
+    <div><label for="sid">Sender member ID</label><input id="sid"></div>
+    <div><label for="vids">Verified member IDs (comma-separated)</label><input id="vids"></div>
+    <div><label for="pnames">Protected names (comma-separated)</label><input id="pnames" placeholder="mothership,admin,support,moderator,swarmlead"></div>
+    <div><label for="known">Known wallet addresses (comma-separated)</label><input id="known"></div>
+    <div><label><input type="checkbox" id="swarm" style="width:auto"> Enable DM ruleset without sender</label></div>
+  </div>
+</details>
+<button id="go" type="button">Check</button>
+<div id="out" aria-live="polite"></div>
+<p class="note">Heuristic only. A low score does not mean something is safe, and a high score does not prove fraud. No live threat feeds are used. Source: github.com/1ntern0t/scamcheck (MIT).</p>
+<script>
+/*__ENGINE__*/
+</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var list = function (v) { return v.split(',').map(function (x) { return x.trim(); }).filter(Boolean); };
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  $('go').addEventListener('click', function () {
+    var opts = {};
+    var name = $('sname').value.trim(), id = $('sid').value.trim();
+    if (name || id) opts.sender = { displayName: name, memberId: id };
+    if ($('vids').value.trim()) opts.verifiedIds = list($('vids').value);
+    if ($('pnames').value.trim()) opts.protectedNames = list($('pnames').value);
+    if ($('known').value.trim()) opts.knownAddresses = list($('known').value);
+    if ($('swarm').checked) opts.swarm = true;
+    var r = Scamcheck.analyze($('input').value, opts);
+    var out = $('out');
+    out.textContent = '';
+    out.appendChild(el('div', 'score ' + r.level, 'Risk ' + r.score + '/100: ' + r.level.toUpperCase() + (r.critical ? ' (secret/credential request)' : '')));
+    if (!r.reasons.length) out.appendChild(el('p', '', 'No heuristic warning signs found. That does not mean it is safe.'));
+    var ul = el('ul');
+    r.reasons.forEach(function (x) {
+      var li = el('li', '', '[+' + x.weight + '] ' + x.message);
+      if (x.evidence) { li.appendChild(document.createTextNode(' ')); li.appendChild(el('code', '', x.evidence)); }
+      ul.appendChild(li);
+    });
+    out.appendChild(ul);
+    r.addresses.forEach(function (a) {
+      out.appendChild(el('p', '', 'Address ' + a.input + ': ' + a.chain + ', ' + (a.valid ? 'valid format' : 'INVALID') + '. ' + a.note));
+    });
+  });
+})();
+</script>
+</body>
+</html>
