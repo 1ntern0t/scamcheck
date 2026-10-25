@@ -12,4 +12,8 @@ and addresses are fictional or example values.
 - `set2-tuning.json` (30 benign / 30 scam): written as a harder set during the first audit, then
   used as **tuning data** for the second-pass rules. Its second-pass scores are optimistic.
 
+- `set4-swarm-dm.json` (4 benign / 6 scam): team-chat DMs with sender metadata. Scam entries are
+  redacted composites supplied by a swarm member; benign controls were hand-written. Member IDs are
+  placeholders (`U_REAL_*` = verified, `U_FAKE_*` = not). Used as **tuning data** for the swarm rules.
+
 Run `npm run eval` (or `node scripts/eval-samples.js --verbose`) to reproduce the numbers.

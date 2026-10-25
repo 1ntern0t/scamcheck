@@ -102,8 +102,10 @@ link or claim step.
 
 **Team-chat DM ruleset** (`swarm: true`, or turned on automatically when sender metadata is given)
 - Offers to steal, pass, keep or reverse a task, reward or points "privately"
-- Pressure to reply fast, and requests to skip the channel
-- Claims to be the "Mothership", an admin or support, plus display names that imitate a protected name (`mothershipswarm`, `M0thership`, `Adm1n`) when the sender's member ID isn't in the caller-supplied `verifiedIds`
+- Vote/raid commands sent in a DM ("Reply STEAL @bot", "Reply V12 REVERSE via DM"). A public "reply KEEP or REVERSE in this thread" is not flagged
+- Pressure to reply fast (including "Deadline 5 min"), and requests to skip the channel
+- Off-channel overrides: "ignore the channel, this DM overrides", "closed in public but you can still … via DM", "skip the #tasks DONE … I'll credit you manually"
+- Claims to be the "Mothership", an admin or support, plus display names that imitate a protected name (`mothershipswarm`, `M0thership`, `Adm1n`) when the sender's member ID isn't in the caller-supplied `verifiedIds`. A name that only matches after homoglyph folding (capital `I` for `l`) is reported as a lookalike, not an exact use. Add your own names (e.g. a member's handle) through `protectedNames`; passing it replaces the defaults, so concatenate `scamcheck.DEFAULT_PROTECTED_NAMES` if you want both
 - Wallet addresses that aren't in `knownAddresses`
 
 ## Limitations (please read)
@@ -129,12 +131,17 @@ rules and the samples, so treat all of these as optimistic sanity checks, not re
 | 1 | 38 / 35 | written after reading the rules (biased) | 1.000 / 1.000 | 1.000 / 0.600 |
 | 2 | 30 / 30 | harder set, **used for tuning** | 1.000 / 1.000 | 1.000 / 0.367 |
 | 3 | 40 / 40 | **held out**, committed before tuning | 0.973 / 0.900 (1.000 / 0.900 after a post-hoc fix) | 1.000 / 0.475 |
+| 4 | 4 / 6 | team-chat DMs (sender + `verifiedIds`), **used for tuning** | 1.000 / 1.000 | 1.000 / 1.000 |
 
 Before the second pass, the numbers were: set 2 at ≥medium, 0.692 / 0.300; set 3 at ≥medium, 0.909 / 0.500, and at ≥high, 1.000 / 0.300.
 On set 3, the one remaining false alarm was `github.blog`, flagged as an unofficial GitHub TLD. It was fixed *after*
 the held-out numbers were recorded, so the 0.973 figure is the honest held-out one. Set 3 was written by someone who
 knew which scam categories were being added, and its baseline misses were looked at once before tuning, so it is
 still not a fully independent test.
+Set 4 holds six swarm scam DMs (redacted composites from a swarm member) and four benign controls. Before the
+swarm rules were tuned on it, set 4 scored 1.000 / 0.667 at ≥medium, 1.000 / 0.500 at ≥high and 1.000 / 0.333 at
+critical; after, all six are `critical` and no control rises above `low`. These six messages were the tuning target,
+so the 1.000 says nothing about unseen DMs. `npm run eval` now also prints a ≥critical row for every set.
 - The DM ruleset is only as good as the `verifiedIds` you supply.
 
 ## Roadmap

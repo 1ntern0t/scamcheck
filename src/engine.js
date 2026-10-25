@@ -648,7 +648,7 @@
     {
       id: 'msg.seed_phrase', category: 'credential-theft', weight: 50, negatable: true, critical: true,
       message: 'Asks for a wallet seed/recovery phrase or private key. Legitimate services never ask for these.',
-      re: /\b(seed\s*phrase|recovery\s*phrase|secret\s*(recovery\s*)?phrase|mnemonic(\s*phrase)?|private\s*keys?|(12|24)[-\s]*words?(\s*(seed|recovery|secret|backup|wallet))?\s*phrase|your\s+(12|24)[-\s]*words|wallet\s*phrase|backup\s*phrase|words\s+(you|u)\s+wrote\s+down)\b/i,
+      re: /\b(seed\s*phrase|recovery\s*phrase|secret\s*(recovery\s*)?phrase|mnemonic(\s*phrase)?|private\s*keys?|(12|24)[-\s]*words?(\s*(seed|recovery|secret|backup|wallet))?\s*phrase|your\s+(12|24)[-\s]*words|wallet\s*phrase|backup\s*phrase|words\s+(you|u)\s+wrote\s+down|wallet\s+seed|seed\s+(words?|for\s+(your\s+|the\s+)?wallet))\b/i,
       // Only a request/instruction nearby makes this critical; a bare mention
       // ("private key ceremony") becomes a weak, non-critical note.
       near: REQUEST_VERBS_RE,
@@ -667,12 +667,12 @@
     {
       id: 'msg.password_request', category: 'credential-theft', weight: 35, negatable: true, critical: true,
       message: 'Asks for your password or login credentials.',
-      re: /\b(send|share|give|confirm|provide|enter|dm|tell|text|reply\s+with)\s+(me\s+|us\s+)?(your\s+)(password|passcode|login\s*details|credentials|pin)\b|\bwhat('?s|\s+is)\s+your\s+(password|passcode|login\s+password|pin)\b/i
+      re: /\b(send|share|give|confirm|provide|enter|dm|tell|text|reply\s+with)\s+(me\s+|us\s+)?(your\s+)([\w#:/.-]+(\s+[\w#:/.-]+){0,3}\s*(\+|&|and|,)\s*(your\s+)?)?(bot\s+|account\s+|admin\s+|login\s+|wallet\s+|swarm\s+)?(password|passcode|login\s*details|credentials|pin)\b|\bwhat('?s|\s+is)\s+your\s+(password|passcode|login\s+password|pin)\b/i
     },
     {
       id: 'msg.secret_request', category: 'credential-theft', weight: 50, negatable: true, critical: true,
       message: 'Asks for a webhook URL, bearer token, API key, access token or similar secret. Never send these in a message.',
-      re: /\b(send|share|paste|give|dm|post|provide|drop|forward|need|want|what('|\s+i)s)\s+(me|us|over|here)?\s*(your|the|ur|a|that)?\s*(slack\s+|discord\s+|github\s+|openai\s+|bot\s+|admin\s+)?(webhook(\s*url)?|bearer(\s*(token|key))?|api[\s_-]*keys?|access[\s_-]*tokens?|auth(entication)?[\s_-]*tokens?|secret[\s_-]*keys?|client[\s_-]*secret|session\s*(token|cookie)|xox[abp]-?\w*|tokens?)\b|\b(webhook\s*url|bearer\s*(token|key)|api[\s_-]*key|access[\s_-]*token|secret[\s_-]*key)\b[^.!?\n]{0,40}\b(dm|send|paste|share|give)\s+(it\s+)?(to\s+)?(me|us|here|over)\b/i
+      re: /\b(send|share|paste|give|dm|post|provide|drop|forward|need|want|what('|\s+i)s)\s+(me|us|over|here)?\s*(your|the|ur|a|that)?\s*(slack\s+|discord\s+|github\s+|openai\s+|bot\s+|admin\s+)?(webhook(\s*url)?|bearer(\s*(token|key))?|api[\s_-]*(keys?|tokens?)|access[\s_-]*tokens?|auth(entication)?[\s_-]*tokens?|secret[\s_-]*keys?|client[\s_-]*secret|session\s*(token|cookie)|xox[abp]-?\w*|tokens?)\b|\b(webhook\s*url|bearer\s*(token|key)|api[\s_-]*key|access[\s_-]*token|secret[\s_-]*key)\b[^.!?\n]{0,40}\b(dm|send|paste|share|give)\s+(it\s+)?(to\s+)?(me|us|here|over)\b/i
     },
     {
       id: 'msg.double_crypto', category: 'crypto-giveaway', weight: 45, negatable: true,
@@ -697,7 +697,7 @@
     {
       id: 'msg.urgency', category: 'pressure', weight: 15,
       message: 'Creates time pressure ("act now", "within 24 hours").',
-      re: /\b(act\s+now|urgent(ly)?|immediately|right\s+away|within\s+\d+\s*(hours?|hrs?|minutes?|mins?)|final\s+(notice|warning|reminder)|last\s+chance|expires?\s+(today|tonight|soon|in\s+\d+)|limited\s+time|only\s+\d+\s+(spots|slots|left)|(reply|respond|answer|confirm|dm\s+me)\s+(back\s+)?(fast|quick(ly)?|asap|now|right\s+now|in\s+the\s+next\s+\d+|within\s+\d+|before\s+(it'?s\s+gone|someone\s+else|the\s+deadline)))\b/i
+      re: /\b(act\s+now|urgent(ly)?|immediately|right\s+away|within\s+\d+\s*(hours?|hrs?|minutes?|mins?)|final\s+(notice|warning|reminder)|last\s+chance|expires?\s+(today|tonight|soon|in\s+\d+)|deadline:?\s*(in\s+)?\d+\s*(minutes?|mins?|m|hours?|hrs?|h)\b|limited\s+time|only\s+\d+\s+(spots|slots|left)|(reply|respond|answer|confirm|dm\s+me)\s+(back\s+)?(fast|quick(ly)?|asap|now|right\s+now|in\s+the\s+next\s+\d+|within\s+\d+|before\s+(it'?s\s+gone|someone\s+else|the\s+deadline)))\b/i
     },
     {
       id: 'msg.account_threat', category: 'pressure', weight: 15,
@@ -856,7 +856,21 @@
     {
       id: 'swarm.authority_claim', category: 'impersonation', weight: 15,
       message: 'Message claims to come from the Mothership/admin/support team. Confirm through the official channel.',
-      re: /\b(this\s+is|from|i'?m|i\s+am|on\s+behalf\s+of|message\s+from)\s+(the\s+)?(mothership|admin(istrator)?s?|support(\s+team)?|mod(erator)?s?|swarm\s+(lead|admin|ops)|ops\s+team|security\s+team)\b/i
+      re: /\b(this\s+is|from|i'?m|i\s+am|on\s+behalf\s+of|message\s+from)\s+(the\s+)?(mothership|admin(istrator)?s?|support(\s+team)?|mod(erator)?s?|swarm\s+(lead|admin|ops)|ops\s+team|security\s+team)\b|^\s*(mothership|admin|support|moderator)\s*:/im
+    },
+    {
+      // Vote/raid commands ("Reply STEAL @bot", "Reply V12 REVERSE") offered in
+      // a DM. Real votes happen in the public thread, so only fires with a
+      // private/DM cue in the message.
+      id: 'swarm.private_vote_command', category: 'swarm-dm', weight: 35,
+      message: 'Asks you to reply STEAL / PASS / KEEP / REVERSE in a private DM. Real swarm votes and offers happen in the public channel.',
+      re: /\b([Rr]eply|REPLY|[Rr]espond|[Tt]ype|[Ss]end|[Aa]nswer|DM)\b[^.!?\n]{0,40}?\b(STEAL|PASS|KEEP|REVERSE)\b/,
+      context: /\b(this\s+dm|via\s+dm|in\s+(a\s+|this\s+)?dm|by\s+dm|dm\s+(only|me)|privately|in\s+private|for\s+you\s+only|only\s+(for\s+)?you|just\s+for\s+you|between\s+us)\b/i
+    },
+    {
+      id: 'swarm.dm_override', category: 'swarm-dm', weight: 20,
+      message: 'Tells you to ignore or skip the public channel ("this DM overrides", "closed in public but still open via DM", "I\'ll credit you manually"). Official decisions are made in public.',
+      re: /\b(ignore|disregard|skip|forget(\s+about)?|bypass)\s+(the\s+)?(public\s+)?(channel|thread|announcement|#[\w-]+)|\b(this\s+)?dm\s+overrides?\b|\b(closed|ended|over|final(i[sz]ed)?)\s+(in\s+public|publicly|in\s+(the\s+)?(channel|thread))\b[^.!?\n]{0,60}\b(dm|privately|in\s+private)\b|\bcredit\s+(you|it|your\s+\w+)\s+manually\b|\bmanual(ly)?\s+(credit|payout|award)\b/i
     },
     {
       id: 'swarm.bypass_channel', category: 'swarm-dm', weight: 15,
@@ -882,16 +896,21 @@
     const verifiedIds = toList(options.verifiedIds).map(toText);
     const pn = options.protectedNames === undefined || options.protectedNames === null
       ? DEFAULT_PROTECTED_NAMES : toList(options.protectedNames);
-    const protectedNames = pn.map((n) => normName(n)).filter(Boolean);
+    const plain = (x) => toText(x).normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const protectedNames = pn.map((x) => ({ norm: normName(x), raw: plain(x), orig: toText(x) })).filter((x) => x.norm);
     const isVerified = id && verifiedIds.includes(String(id));
     // Fold l/i so "Adm1n" (skeleton "admln") and "mothershlp" compare equal.
     const fold = (x) => x.replace(/l/g, 'i');
     const n = fold(normName(name));
     if (!n || isVerified) return reasons;
-    for (const p0 of protectedNames) {
+    // Case-folded name with no homoglyph mapping: "AdmIn" with a capital I
+    // is not the same string as "admin", so it is a lookalike, not exact.
+    const rawName = plain(name);
+    for (const entry of protectedNames) {
+      const p0 = entry.norm;
       const p = fold(p0);
       let kind = null;
-      if (n === p) kind = 'exact';
+      if (n === p) kind = rawName === entry.raw ? 'exact' : 'lookalike';
       else if (n.includes(p) || (p.length >= 6 && P.editDistance(n, p) <= (p.length >= 9 ? 2 : 1))) kind = 'lookalike';
       else if (p.length >= 6) {
         // e.g. "mothershipswarm" vs "mothership": prefix/suffix padding
@@ -902,8 +921,8 @@
         const unknownIds = verifiedIds.length === 0;
         const weight = unknownIds ? 20 : (kind === 'exact' ? 45 : 50);
         const msg = unknownIds
-          ? 'Sender name "' + name + '" resembles protected name "' + p0 + '", and no verified-ID list was supplied, so it cannot be confirmed.'
-          : 'Sender "' + name + '"' + (id ? ' (' + id + ')' : '') + ' uses or imitates protected name "' + p + '" but its member ID is not in the verified list.';
+          ? 'Sender name "' + name + '" resembles protected name "' + entry.orig + '", and no verified-ID list was supplied, so it cannot be confirmed.'
+          : 'Sender "' + name + '"' + (id ? ' (' + id + ')' : '') + ' ' + (kind === 'exact' ? 'uses' : 'imitates (lookalike of)') + ' protected name "' + entry.orig + '" but its member ID is not in the verified list.';
         reasons.push(makeReason('swarm.sender_impersonation', 'impersonation', weight, msg, name));
         break;
       }
