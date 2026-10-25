@@ -509,9 +509,36 @@
   };
 
   // ------------------------------------------------------------- Helpers
+  // Convert any input to a string without throwing (null-prototype objects,
+  // symbols and objects whose toString throws would otherwise crash String()).
+  function toText(v) {
+    if (typeof v === 'string') return v;
+    if (v === null || v === undefined) return '';
+    try {
+      return String(v);
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function toList(v) {
+    if (v === null || v === undefined) return [];
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') return v.split(',').map((x) => x.trim()).filter(Boolean);
+    return [];
+  }
+
+  function safeDecode(s) {
+    try {
+      return decodeURIComponent(s);
+    } catch (e) {
+      return s;
+    }
+  }
+
   function makeReason(id, category, weight, message, evidence) {
     const r = { id, category, weight, message };
-    if (evidence !== undefined && evidence !== null && evidence !== '') r.evidence = String(evidence).slice(0, 200);
+    if (evidence !== undefined && evidence !== null && evidence !== '') r.evidence = toText(evidence).slice(0, 200);
     return r;
   }
 
@@ -589,7 +616,7 @@
 
   // ------------------------------------------------------------ URL checks
   function normalizeUrlInput(raw) {
-    let s = String(raw).trim();
+    let s = toText(raw).trim();
     s = s.replace(/^hxxp/i, 'http').replace(/\[\.\]/g, '.');
     if (/^(javascript|data|vbscript):/i.test(s)) return { scheme: s.split(':')[0].toLowerCase(), raw: s };
     if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) s = 'http://' + s;
@@ -609,7 +636,7 @@
     const options = opts || {};
     const reasons = [];
     const norm = normalizeUrlInput(input);
-    const result = { input: String(input), reasons, score: 0 };
+    const result = { input: toText(input), reasons, score: 0 };
 
     if (norm.scheme) {
       reasons.push(makeReason('url.script_scheme', 'url', 40,
@@ -646,7 +673,7 @@
 
     // Userinfo trick: https://paypal.com@evil.example/
     if (u.username || u.password) {
-      const userinfo = decodeURIComponent(u.username + (u.password ? ':' + u.password : ''));
+      const userinfo = safeDecode(u.username + (u.password ? ':' + u.password : ''));
       const looksLikeDomain = /[a-z0-9-]+\.[a-z]{2,}/i.test(userinfo);
       reasons.push(makeReason('url.userinfo', 'url', looksLikeDomain ? 45 : 30,
         'Text before "@" in the link (' + userinfo + ') is not where it goes; the real destination is ' + host + '.', input));
@@ -780,7 +807,8 @@
   }
 
   // --------------------------------------------------------- URL extraction
-  function extractUrls(text) {
+  function extractUrls(input) {
+    const text = toText(input);
     const found = [];
     const spans = [];
     const overlaps = (s, e) => spans.some(([a, b]) => s < b && e > a);
@@ -875,7 +903,7 @@
   }
 
   function analyzeAddress(addr) {
-    const a = String(addr).trim();
+    const a = toText(addr).trim();
     // Ethereum / EVM
     if (/^0x[0-9a-fA-F]+$/.test(a)) {
       if (a.length !== 42) {
@@ -925,7 +953,8 @@
     return null;
   }
 
-  function extractAddresses(text) {
+  function extractAddresses(input) {
+    const text = toText(input);
     const out = [];
     const seen = new Set();
     const add = (r) => {
@@ -1074,18 +1103,21 @@
   const DEFAULT_PROTECTED_NAMES = ['mothership', 'admin', 'support', 'moderator', 'swarmlead'];
 
   function normName(s) {
-    return skeleton(String(s || '').normalize('NFKC')).replace(/[^a-z0-9]/g, '');
+    return skeleton(toText(s).normalize('NFKC')).replace(/[^a-z0-9]/g, '');
   }
 
   // Sender checks. Nothing is hardcoded: the caller supplies verifiedIds
   // (member IDs allowed to use protected names) and optionally protectedNames.
   function checkSender(sender, options) {
     const reasons = [];
-    if (!sender) return reasons;
-    const name = String(sender.displayName || sender.name || '');
-    const id = sender.memberId || sender.id || '';
-    const verifiedIds = (options.verifiedIds || []).map(String);
-    const protectedNames = (options.protectedNames || DEFAULT_PROTECTED_NAMES).map((n) => normName(n)).filter(Boolean);
+    if (!sender || typeof sender !== 'object') return reasons;
+    options = options || {};
+    const name = toText(sender.displayName || sender.name || '');
+    const id = toText(sender.memberId || sender.id || '');
+    const verifiedIds = toList(options.verifiedIds).map(toText);
+    const pn = options.protectedNames === undefined || options.protectedNames === null
+      ? DEFAULT_PROTECTED_NAMES : toList(options.protectedNames);
+    const protectedNames = pn.map((n) => normName(n)).filter(Boolean);
     const isVerified = id && verifiedIds.includes(String(id));
     // Fold l/i so "Adm1n" (skeleton "admln") and "mothershlp" compare equal.
     const fold = (x) => x.replace(/l/g, 'i');
@@ -1153,7 +1185,7 @@
 
   function analyze(input, opts) {
     const options = opts || {};
-    const text = String(input == null ? '' : input).slice(0, options.maxLength || 100000);
+    const text = toText(input).slice(0, options.maxLength || 100000);
     const reasons = [];
 
     // URLs
@@ -1186,7 +1218,7 @@
     if (swarm) {
       for (const r of matchPatterns(text, SWARM_PATTERNS)) reasons.push(r);
       for (const r of checkSender(options.sender, options)) reasons.push(r);
-      const known = (options.knownAddresses || []).map((a) => String(a).toLowerCase());
+      const known = toList(options.knownAddresses).map((a) => toText(a).toLowerCase());
       for (const a of addresses) {
         if (!known.includes(a.input.toLowerCase())) {
           reasons.push(makeReason('swarm.unknown_address', 'crypto', 10,
