@@ -96,3 +96,8 @@ test('thousands of links or addresses stay fast and report truncation', () => {
 test('ordinary messages are not marked truncated', () => {
   assert.equal(sc.analyze('see https://github.com/x and 0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed').truncated, undefined);
 });
+
+test('Cyrillic shha (U+04BB) is treated as a look-alike of "h"', () => {
+  const r = sc.analyzeUrl('https://xn--gitub-0kf.com/login'); // git\u04bbub.com
+  assert.ok(r.reasons.some((x) => x.id === 'url.homograph_brand'));
+});
