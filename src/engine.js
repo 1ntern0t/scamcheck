@@ -627,11 +627,20 @@
   // ------------------------------------------------------- Message patterns
   // `negatable` patterns are ignored when preceded (same sentence) by
   // words like "never" / "do not", so safety advice is not flagged.
+  // Instruction verbs that turn a mention of a secret or payment method into a request.
+  const REQUEST_VERBS_RE = /\b(send|share|give|enter|re-?enter|paste|type|re-?type|provide|submit|import|input|upload|dm|tell|confirm|verify|validate|write|reply|text|read|need|want|buy|purchase|pay|get\s+me|pick\s+up|scratch|lend|photos?\s+of)\b/i;
+  // Context that makes a "you won" message look like a prize scam.
+  const PRIZE_CONTEXT_RE = /\b(claim|pay|fee|shipping|deposit|send|wire|bank\s+details|card|click|link|call|reply|text|cash|gift\s*card|redeem|\$\s?\d|usd|reward)\b/i;
+
   const PATTERNS = [
     {
       id: 'msg.seed_phrase', category: 'credential-theft', weight: 50, negatable: true, critical: true,
       message: 'Asks for a wallet seed/recovery phrase or private key. Legitimate services never ask for these.',
-      re: /\b(seed\s*phrase|recovery\s*phrase|secret\s*(recovery\s*)?phrase|mnemonic(\s*phrase)?|private\s*key|(12|24)[-\s]*words?(\s*(seed|recovery|secret|backup|wallet))?\s*phrase|your\s+(12|24)[-\s]*words|wallet\s*phrase|backup\s*phrase)\b/i
+      re: /\b(seed\s*phrase|recovery\s*phrase|secret\s*(recovery\s*)?phrase|mnemonic(\s*phrase)?|private\s*keys?|(12|24)[-\s]*words?(\s*(seed|recovery|secret|backup|wallet))?\s*phrase|your\s+(12|24)[-\s]*words|wallet\s*phrase|backup\s*phrase|words\s+(you|u)\s+wrote\s+down)\b/i,
+      // Only a request/instruction nearby makes this critical; a bare mention
+      // ("private key ceremony") becomes a weak, non-critical note.
+      near: REQUEST_VERBS_RE,
+      weak: { id: 'msg.seed_phrase_mention', weight: 5, message: 'Mentions a seed phrase or private key (no request to share it was found).' }
     },
     {
       id: 'msg.wallet_validation', category: 'credential-theft', weight: 25, negatable: true,
@@ -704,7 +713,8 @@
       re: /\b(geek\s*squad|norton\s*(360|lifelock)?|mcafee|best\s*buy\s*protection)\b[^.!?\n]{0,80}\b(renew|charged|invoice|subscription)\b/i
     },
     {
-      id: 'msg.prize', category: 'prize-lottery', weight: 25,
+      id: 'msg.prize', category: 'prize-lottery', weight: 25, context: PRIZE_CONTEXT_RE, linkIsContext: true,
+      weak: { weight: 10 },
       message: 'Says you have won a prize/lottery or have been "selected".',
       re: /\b(you('ve|\s+have)?\s+(won|been\s+selected|been\s+chosen)|congratulations[^.!?\n]{0,40}\b(winner|won|selected|prize)|lottery|sweepstakes?|jackpot|claim\s+your\s+(prize|winnings))\b/i
     },
@@ -716,7 +726,9 @@
     {
       id: 'msg.untraceable_payment', category: 'payment-method', weight: 30,
       message: 'Asks for payment by gift cards, Bitcoin ATM, wire, or similar hard-to-reverse methods.',
-      re: /\b(gift\s*cards?|itunes\s*cards?|apple\s*cards?|google\s*play\s*cards?|steam\s*cards?|bitcoin\s*atm|crypto\s*atm|western\s*union|moneygram|send\s+the\s+card\s+numbers?|scratch\s+off\s+the\s+back)\b/i
+      re: /\b(gift\s*cards?|itunes\s*cards?|apple\s*cards?|google\s*play\s*cards?|steam\s*cards?|amazon\s*cards?|bitcoin\s*atm|crypto\s*atm|western\s*union|moneygram|send\s+the\s+card\s+numbers?|scratch\s+off\s+the\s+back)\b/i,
+      near: REQUEST_VERBS_RE,
+      weak: { weight: 5 }
     },
     {
       id: 'msg.secrecy', category: 'pressure', weight: 10,
@@ -805,22 +817,45 @@
     return parts[parts.length - 1];
   }
 
-  function matchPatterns(text, list) {
+  // Text around a match, clipped to the enclosing sentence(s).
+  function windowAround(text, index, length, size) {
+    return text.slice(Math.max(0, index - size), Math.min(text.length, index + length + size));
+  }
+
+  // `near`: a regex that must match within ~80 chars of the hit for full
+  // weight. `context` (+ `linkIsContext`): a regex that must match anywhere in
+  // the text (or a link must be present). Otherwise `weak` applies, if given,
+  // and the rule is never critical. `requiresLink`: only fires with a link.
+  function matchPatterns(text, list, ctx) {
+    const c = ctx || {};
     const reasons = [];
     for (const p of list || PATTERNS) {
+      if (p.requiresLink && !c.hasLink) continue;
       const re = new RegExp(p.re.source, p.re.flags.includes('g') ? p.re.flags : p.re.flags + 'g');
       let m;
       let hit = null;
+      let weakHit = null;
+      let guard = 0;
       while ((m = re.exec(text))) {
+        if (m[0] === '') re.lastIndex++;
         if (p.negatable && NEGATION_RE.test(sentenceBefore(text, m.index))) continue;
+        if (p.near && !p.near.test(windowAround(text, m.index, m[0].length, 80))) {
+          if (!weakHit) weakHit = m;
+          if (++guard > 200) break;
+          continue;
+        }
         hit = m;
         break;
       }
-      if (hit) {
-        const r = makeReason(p.id, p.category, p.weight, p.message, hit[0].trim());
-        if (p.critical) r.critical = true;
-        reasons.push(r);
-      }
+      let strong = !!hit;
+      if (!hit) hit = weakHit;
+      if (!hit) continue;
+      if (strong && p.context && !(p.linkIsContext && c.hasLink) && !p.context.test(text)) strong = false;
+      if (!strong && !p.weak) continue;
+      const w = strong ? {} : p.weak;
+      const r = makeReason(w.id || p.id, p.category, w.weight !== undefined ? w.weight : p.weight, w.message || p.message, hit[0].trim());
+      if (p.critical && strong) r.critical = true;
+      reasons.push(r);
     }
     return reasons;
   }
@@ -868,12 +903,13 @@
     }
 
     // Message patterns
-    for (const r of matchPatterns(text)) reasons.push(r);
+    const ctx = { hasLink: urlHits.length > 0 };
+    for (const r of matchPatterns(text, PATTERNS, ctx)) reasons.push(r);
 
     // Swarm / team-chat DM ruleset
     const swarm = !!(options.swarm || options.sender);
     if (swarm) {
-      for (const r of matchPatterns(text, SWARM_PATTERNS)) reasons.push(r);
+      for (const r of matchPatterns(text, SWARM_PATTERNS, ctx)) reasons.push(r);
       for (const r of checkSender(options.sender, options)) reasons.push(r);
       const known = toList(options.knownAddresses).map((a) => toText(a).toLowerCase());
       for (const a of addresses) {
@@ -888,7 +924,10 @@
     const sendRe = /\b(send|transfer|deposit|pay|wire|forward)\b[^.!?\n]{0,120}/i;
     const sendMatch = sendRe.exec(text);
     if (addresses.length && sendMatch && !NEGATION_RE.test(sentenceBefore(text, sendMatch.index))) {
-      reasons.push(makeReason('crypto.funds_request', 'crypto', 25,
+      // Full weight only alongside another warning sign (pressure, giveaway,
+      // impersonation, a bad link...). A friend splitting costs is not a scam.
+      const otherSignal = reasons.some((r) => r.category !== 'crypto' && r.weight >= 10);
+      reasons.push(makeReason('crypto.funds_request', 'crypto', otherSignal ? 25 : 10,
         'Asks you to send funds to a crypto address. Crypto transfers are generally irreversible.', sendMatch[0].trim()));
     }
 
