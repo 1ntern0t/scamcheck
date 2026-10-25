@@ -16,7 +16,8 @@
   ],
   "scripts": {
     "test": "node --test test/*.test.js",
-    "build:web": "node scripts/build-web.js"
+    "build:web": "node scripts/build-web.js",
+    "eval": "node scripts/eval-samples.js"
   },
   "engines": {
     "node": ">=20"
