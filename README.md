@@ -97,6 +97,7 @@ link or claim step.
 **Crypto addresses** (format checks only)
 - Ethereum/EVM: length plus **EIP-55** checksum (pure-JS Keccak-256)
 - Bitcoin: Base58Check (P2PKH/P2SH) and **bech32/bech32m** (BIP-173/350)
+- Dogecoin: Base58Check P2PKH (`D...`) and P2SH (version 0x16), so a mistyped or altered DOGE address is flagged
 - Solana: base58 that decodes to 32 bytes
 - Flags invalid checksums, and flags messages that ask you to send funds to an address
 

@@ -597,8 +597,14 @@
         if (c && c.ok && (c.version === 0x6f || c.version === 0xc4)) {
           return { input: a, chain: 'bitcoin', valid: true, network: 'testnet', note: 'Valid testnet address.' };
         }
+        if (c && c.ok && (c.version === 0x1e || c.version === 0x16)) {
+          return { input: a, chain: 'dogecoin', valid: true, network: 'mainnet', note: c.version === 0x1e ? 'Valid Dogecoin (P2PKH) address.' : 'Valid Dogecoin P2SH address.' };
+        }
         if (/^[13]/.test(a)) {
           return { input: a, chain: 'bitcoin', valid: false, note: 'Looks like a Bitcoin address but the Base58Check checksum fails (typo or altered).' };
+        }
+        if (/^D/.test(a) && c && c.version === 0x1e) {
+          return { input: a, chain: 'dogecoin', valid: false, note: 'Looks like a Dogecoin address but the Base58Check checksum fails (typo or altered).' };
         }
         return null;
       }
