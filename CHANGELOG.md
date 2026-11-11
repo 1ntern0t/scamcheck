@@ -10,3 +10,4 @@
 
 ### Changed
 - One tuning sample in `test/fixtures/set2-tuning.json` now uses a generic first name. Eval results did not change.
+- GitHub Actions CI now runs from `.github/workflows/ci.yml` on push and pull request. `actions/checkout` and `actions/setup-node` are v5, because v4 still uses the Node 20 action runtime that GitHub-hosted runners removed.

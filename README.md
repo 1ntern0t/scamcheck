@@ -161,8 +161,8 @@ npm run build:web     # regenerate docs/index.html from src/
 npm run eval          # precision/recall on the hand-written fixture sets
 ```
 
-`docs/index.html` is generated, so edit `web/index.template.html` or `src/` instead. A CI workflow is in
-`ci/github-actions-ci.yml`. Copy it to `.github/workflows/` to turn it on.
+`docs/index.html` is generated, so edit `web/index.template.html` or `src/` instead. CI runs from
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) on push and pull request, including `main`.
 
 ## License
 
